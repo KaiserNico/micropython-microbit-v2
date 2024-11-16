@@ -1,0 +1,41 @@
+name: Build MicroPython
+
+on:
+  push:
+    branches: '*'
+  pull_request:
+    branches: '*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: build.py ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install toolchain (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo add-apt-repository -y ppa:team-gcc-arm-embedded/ppa
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-arm-embedded
+          sudo apt-get install -y cmake
+      - name: Check Versions
+        run: |
+          arm-none-eabi-gcc --version
+          cmake --version
+      - name: Build
+        run: |
+          make -C lib/micropython/mpy-cross -j2
+          cd src
+          make -j2
+      - name: Upload hex file
+        uses: actions/upload-artifact@v1
+        with:
+          name: MICROBIT-MICROPYTHON-${{ github.sha }}.hex
+          path: src/MICROBIT.hex
